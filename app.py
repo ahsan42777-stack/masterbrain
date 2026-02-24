@@ -53,7 +53,7 @@ st.markdown("""
     .bias-bullish {color: #00d26a; font-weight: bold; font-size: 24px;}
     .bias-bearish {color: #ff4b4b; font-weight: bold; font-size: 24px;}
     .bias-neutral {color: #ffc107; font-weight: bold; font-size: 24px;}
-    .matrix-card {background-color: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #00d26a;}
+    .matrix-card {background-color: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #00d26a; color: #ffffff; line-height: 1.5;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -202,3 +202,4 @@ if uploaded_file is not None:
                         
                 except Exception as e:
                     st.error(f"An error occurred: {e}")
+
