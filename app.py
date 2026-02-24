@@ -47,7 +47,8 @@ Output your analysis strictly in JSON format.
 # ==========================================
 # STREAMLIT UI SETUP & CUSTOM CSS
 # ==========================================
-st.set_page_config(page_title="IFX Master Brain", page_icon="📈", layout="centered")
+st.set_page_config(page_title="IFX Master Brain", page_icon="fdm logo.jpg", layout="centered")
+st.logo("fdm logo.jpg")
 
 st.markdown("""
     <style>
@@ -219,3 +220,4 @@ if uploaded_file is not None:
                         
                 except Exception as e:
                     st.error(f"An error occurred: {e}")
+
