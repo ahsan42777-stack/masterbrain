@@ -2,6 +2,8 @@ import os
 import time
 import json
 import re
+import io
+from PIL import Image
 import streamlit as st
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part
@@ -116,8 +118,23 @@ if uploaded_file is not None:
                         system_instruction=SYSTEM_INSTRUCTION
                     )
                     
-                    image_bytes = uploaded_file.getvalue()
-                    image_part = Part.from_data(data=image_bytes, mime_type=uploaded_file.type)
+                    # --- NEW: AUTOMATIC MOBILE IMAGE COMPRESSION ---
+                    image = Image.open(uploaded_file)
+                    if image.mode in ("RGBA", "P"):
+                        image = image.convert("RGB")
+                    
+                    # If the image is a massive phone screenshot, shrink it to 1600px wide
+                    if image.width > 1600:
+                        ratio = 1600 / image.width
+                        new_height = int(image.height * ratio)
+                        image = image.resize((1600, new_height), Image.Resampling.LANCZOS)
+                        
+                    img_byte_arr = io.BytesIO()
+                    image.save(img_byte_arr, format='JPEG', quality=85)
+                    compressed_bytes = img_byte_arr.getvalue()
+                    
+                    image_part = Part.from_data(data=compressed_bytes, mime_type="image/jpeg")
+                    # -----------------------------------------------
                     
                     # QUARANTINED & FORCED VERBOSITY PROMPT
                     brain_prompt = f"""
@@ -202,4 +219,3 @@ if uploaded_file is not None:
                         
                 except Exception as e:
                     st.error(f"An error occurred: {e}")
-
