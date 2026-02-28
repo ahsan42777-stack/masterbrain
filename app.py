@@ -24,7 +24,13 @@ if "GCP_SA_KEY" in st.secrets:
 PROJECT_ID = "project-1a334c02-70f6-4b1c-987"
 REGION = "us-east1" 
 TUNED_ENDPOINT_ID = "projects/459138550386/locations/us-east1/endpoints/8842556184574558208"
-APP_PIN = "7777" 
+
+# 🔒 Fetch the password from Streamlit Secrets (so it's invisible on GitHub)
+try:
+    APP_PIN = st.secrets["MASTER_PASSWORD"]
+except KeyError:
+    st.error("System Error: MASTER_PASSWORD not found in secrets. Please configure it in your Streamlit dashboard.")
+    st.stop()
 
 # ==========================================
 # IRONCLAD SYSTEM INSTRUCTIONS
@@ -68,16 +74,16 @@ if "authenticated" not in st.session_state:
 
 if not st.session_state.authenticated:
     st.markdown('<p class="big-font">📈 IFX Trading Academy</p>', unsafe_allow_html=True)
-    st.warning(f"🔒 Master Brain is locked. Enter PIN {APP_PIN} to access.")
-    st.info("💡 Welcome to IFX Trading Academy. Please use the public PIN above to unlock the FDM engine.")
+    st.warning("🔒 Master Brain is locked. Patreon VIP access required.")
+    st.info("💡 Enter your IFX Master Brain password below to unlock the AI Engine.")
     
-    pin_input = st.text_input("Security PIN", type="password")
+    pin_input = st.text_input("Master Password", type="password")
     if st.button("Unlock Engine"):
         if pin_input == APP_PIN:
             st.session_state.authenticated = True
             st.rerun()
         else:
-            st.error("❌ Incorrect PIN. Access Denied.")
+            st.error("❌ Incorrect Password. Access Denied.")
     st.stop() 
 
 # ==========================================
