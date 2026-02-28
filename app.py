@@ -163,7 +163,7 @@ if uploaded_files:
                             
                             image_parts.append(Part.from_data(data=compressed_bytes, mime_type="image/jpeg"))
                         
-                        # 🚀 RELAXED PROMPT: Allows AI to "think" first, returning structural logic to normal.
+                        # 🚀 UPDATED PROMPT: Added Rule 4 for Macro Targets & explicitly required Bullish/Bearish/Invalidation levels in the JSON output
                         brain_prompt = f"""
                         Analyze these live charts using the deep IFX FDM methodology. 
                         Do not invent levels. Base your analysis purely on the visible market structure, order blocks, and liquidity sweeps in the provided charts.
@@ -189,8 +189,9 @@ if uploaded_files:
                             "MTF Alignment": "How HTF and LTF align",
                             "Bias": "Bullish, Bearish, or Neutral",
                             "Levels": [
-                              {{"Level Type": "Target 1", "Price Point": "Exact price or zone", "Condition / Notes": "What to look for here"}},
-                              {{"Level Type": "Support/Invalidation", "Price Point": "Exact price or zone", "Condition / Notes": "If this breaks, bias changes"}}
+                              {{"Level Type": "Bullish Target", "Price Point": "Macro target if price pushes up", "Condition / Notes": "What to look for here"}},
+                              {{"Level Type": "Bearish Target", "Price Point": "Macro target if price breaks down", "Condition / Notes": "What to look for here"}},
+                              {{"Level Type": "Invalidation Zone", "Price Point": "Exact zone", "Condition / Notes": "If this breaks, the primary bias changes"}}
                             ]
                           }}
                         }}
@@ -264,4 +265,3 @@ if uploaded_files:
                             
                     except Exception as e:
                         st.error(f"An error occurred: {e}")
-
