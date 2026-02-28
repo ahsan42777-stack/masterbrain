@@ -174,7 +174,7 @@ if uploaded_files:
                         
                         IMPORTANT RULES:
                         1. First, locate the Current Live Price on the extreme right edge. Use this as your anchor for projecting future moves.
-                        2. Identify the true, logical Daily Pivot Zone based on actual wicks and structure. Do NOT use the OHLC (Open, High, Low, Close) text data printed at the top left of the chart to build your zones. You must use the visual candle structure.
+                        2. Identify the true, logical Daily Pivot Zone based on actual wicks and structure.
                         3. Project logical Future Targets and Invalidations based on MTF alignment.
                         4. MACRO TARGETS: When defining Targets and Invalidation zones, you must look left and use MAJOR structural swing highs and swing lows. Do NOT use the high or low of the current active candle as a target.
                         
@@ -265,4 +265,5 @@ if uploaded_files:
                             
                     except Exception as e:
                         st.error(f"An error occurred: {e}")
+
 
