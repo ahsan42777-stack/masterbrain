@@ -4,6 +4,8 @@ import json
 import re
 import io
 import datetime
+import urllib.request
+import xml.etree.ElementTree as ET
 import gspread
 from PIL import Image
 import streamlit as st
@@ -33,6 +35,25 @@ except KeyError:
     st.stop()
 
 # ==========================================
+# LIVE DATA FETCHER (NEW)
+# ==========================================
+def get_live_market_news():
+    """Scrapes the top 5 live breaking news headlines from ForexLive RSS"""
+    try:
+        url = 'https://www.forexlive.com/feed/news'
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            xml_data = response.read()
+        root = ET.fromstring(xml_data)
+        headlines = []
+        for item in root.findall('.//item')[:5]:
+            title = item.find('title').text
+            headlines.append(f"- {title}")
+        return "\n".join(headlines)
+    except Exception as e:
+        return "- Live news feed temporarily unavailable."
+
+# ==========================================
 # IRONCLAD SYSTEM INSTRUCTIONS
 # ==========================================
 SYSTEM_INSTRUCTION = """
@@ -59,80 +80,38 @@ st.set_page_config(page_title="IFX Master Brain", page_icon="🧠", layout="cent
 # Institutional Quant CSS Overhaul
 st.markdown("""
     <style>
-    /* Global App Background */
-    .stApp {
-        background-color: #0b0f19;
-        color: #e2e8f0;
-    }
-    
-    /* Typography & Accents */
+    .stApp { background-color: #0b0f19; color: #e2e8f0; }
     h1, h2, h3 { color: #ffffff !important; font-weight: 700 !important; }
     .neon-text { color: #00d26a; text-shadow: 0 0 10px rgba(0, 210, 106, 0.4); }
     .sub-text { color: #94a3b8; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;}
+    label, .st-emotion-cache-10trncz, p, .stMarkdown p { color: #cbd5e1 !important; }
     
-    /* Force all Streamlit labels and standard text to Light Gray so it is readable */
-    label, .st-emotion-cache-10trncz, p, .stMarkdown p {
-        color: #cbd5e1 !important;
-    }
-    
-    /* Login Terminal Card */
     .login-container {
-        background: rgba(15, 23, 42, 0.8);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(0, 210, 106, 0.3);
-        border-radius: 16px;
-        padding: 40px;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 210, 106, 0.1);
-        margin-top: 50px;
+        background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 210, 106, 0.3); border-radius: 16px;
+        padding: 40px; text-align: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 210, 106, 0.1); margin-top: 50px;
     }
     
-    /* Force Input Boxes to Dark Mode */
     .stTextInput input, .stTextArea textarea {
-        background-color: #1e293b !important;
-        color: #ffffff !important;
+        background-color: #1e293b !important; color: #ffffff !important;
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
-    .stTextInput input:focus, .stTextArea textarea:focus {
-        border: 1px solid #00d26a !important;
-        box-shadow: 0 0 10px rgba(0, 210, 106, 0.2) !important;
-    }
+    .stTextInput input:focus, .stTextArea textarea:focus { border: 1px solid #00d26a !important; box-shadow: 0 0 10px rgba(0, 210, 106, 0.2) !important; }
 
-    /* Force File Uploader & its internal text to Dark Mode */
-    [data-testid="stFileUploadDropzone"] {
-        background-color: #1e293b !important;
-        border: 1px dashed rgba(255, 255, 255, 0.2) !important;
-    }
-    [data-testid="stFileUploadDropzone"] * {
-        color: #e2e8f0 !important;
-    }
-    [data-testid="stFileUploadDropzone"]:hover {
-        border: 1px dashed #00d26a !important;
-        background-color: rgba(0, 210, 106, 0.05) !important;
-    }
+    [data-testid="stFileUploadDropzone"] { background-color: #1e293b !important; border: 1px dashed rgba(255, 255, 255, 0.2) !important; }
+    [data-testid="stFileUploadDropzone"] * { color: #e2e8f0 !important; }
+    [data-testid="stFileUploadDropzone"]:hover { border: 1px dashed #00d26a !important; background-color: rgba(0, 210, 106, 0.05) !important; }
     
-    /* Force Status/Expander Boxes to Dark Mode */
-    [data-testid="stStatusWidget"], [data-testid="stExpander"] {
-        background-color: #1e293b !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        color: #ffffff !important;
-    }
-    [data-testid="stStatusWidget"] *, [data-testid="stExpander"] * {
-        color: #e2e8f0 !important; 
-    }
+    [data-testid="stStatusWidget"], [data-testid="stExpander"] { background-color: #1e293b !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; color: #ffffff !important; }
+    [data-testid="stStatusWidget"] *, [data-testid="stExpander"] * { color: #e2e8f0 !important; }
 
-    /* Dashboard Glassmorphism Cards */
     .glass-card {
-        background: rgba(30, 41, 59, 0.5);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px;
+        padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     }
     
-    /* Bias Displays */
     .bias-card-bullish { background: linear-gradient(135deg, rgba(0, 210, 106, 0.1), rgba(0, 0, 0, 0)); border-left: 4px solid #00d26a; }
     .bias-card-bearish { background: linear-gradient(135deg, rgba(255, 75, 75, 0.1), rgba(0, 0, 0, 0)); border-left: 4px solid #ff4b4b; }
     .bias-card-neutral { background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(0, 0, 0, 0)); border-left: 4px solid #ffc107; }
@@ -141,15 +120,7 @@ st.markdown("""
     .bias-text-bearish { color: #ff4b4b; font-size: 32px; font-weight: 800; letter-spacing: 1px; }
     .bias-text-neutral { color: #ffc107; font-size: 32px; font-weight: 800; letter-spacing: 1px; }
     
-    /* Level Action Cards */
-    .level-card {
-        padding: 16px;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        background: #1e293b;
-        display: flex;
-        flex-direction: column;
-    }
+    .level-card { padding: 16px; border-radius: 8px; margin-bottom: 12px; background: #1e293b; display: flex; flex-direction: column; }
     .level-bullish { border-left: 5px solid #00d26a; }
     .level-bearish { border-left: 5px solid #ff4b4b; }
     .level-inval { border-left: 5px solid #f97316; }
@@ -158,29 +129,14 @@ st.markdown("""
     .level-price { font-size: 24px; font-weight: bold; color: #ffffff !important; margin-bottom: 8px; font-family: 'Courier New', monospace;}
     .level-note { font-size: 13px; color: #94a3b8 !important; font-style: italic; }
 
-    /* Custom Streamlit Button Styling Overrides */
-    div.stButton > button:first-child {
-        background-color: #00d26a !important;
-        color: #000000 !important;
-        font-weight: bold;
-        border-radius: 8px;
-        border: none;
-        padding: 10px 20px;
-        transition: all 0.3s ease;
-    }
-    div.stButton > button:first-child p {
-        color: #000000 !important; 
-    }
-    div.stButton > button:first-child:hover {
-        background-color: #00e676 !important;
-        box-shadow: 0 0 15px rgba(0, 210, 106, 0.4);
-        transform: translateY(-2px);
-    }
+    div.stButton > button:first-child { background-color: #00d26a !important; color: #000000 !important; font-weight: bold; border-radius: 8px; border: none; padding: 10px 20px; transition: all 0.3s ease; }
+    div.stButton > button:first-child p { color: #000000 !important; }
+    div.stButton > button:first-child:hover { background-color: #00e676 !important; box-shadow: 0 0 15px rgba(0, 210, 106, 0.4); transform: translateY(-2px); }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# SECURITY PIN SYSTEM (THE TERMINAL LOGIN)
+# SECURITY PIN SYSTEM
 # ==========================================
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
@@ -209,7 +165,7 @@ if not st.session_state.authenticated:
     st.stop() 
 
 # ==========================================
-# RATE LIMITER
+# RATE LIMITER & LOGGING
 # ==========================================
 if "request_timestamps" not in st.session_state:
     st.session_state.request_timestamps = []
@@ -221,9 +177,6 @@ def check_rate_limit():
         return False
     return True
 
-# ==========================================
-# DATABASE LOGGER
-# ==========================================
 def log_to_google_sheets(notes, bias, raw_json):
     try:
         gc = gspread.service_account(filename="gcp_key.json")
@@ -232,7 +185,7 @@ def log_to_google_sheets(notes, bias, raw_json):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         worksheet.append_row([timestamp, notes, bias, raw_json])
     except Exception as e:
-        pass # Silently fail if DB is busy to not interrupt the user
+        pass 
 
 # ==========================================
 # MAIN APP INTERFACE
@@ -269,8 +222,9 @@ if uploaded_files:
                             system_instruction=SYSTEM_INSTRUCTION
                         )
                         
-                        # Fetch Live Date for Fundamental Context
-                        live_date = datetime.datetime.now().strftime("%d %B %Y")
+                        # 🚀 Fetch Live Date and Live Market News
+                        live_date = datetime.datetime.now().strftime("%A, %B %d, %Y")
+                        live_news = get_live_market_news()
                         
                         # 1. Image Processing & Cropping
                         image_parts = []
@@ -279,7 +233,6 @@ if uploaded_files:
                             if image.mode in ("RGBA", "P"):
                                 image = image.convert("RGB")
                             
-                            # CROP FIX: Removes the top 70 pixels to hide TradingView OHLC text
                             width, height = image.size
                             image = image.crop((0, 70, width, height))
                             
@@ -293,7 +246,7 @@ if uploaded_files:
                             compressed_bytes = img_byte_arr.getvalue()
                             image_parts.append(Part.from_data(data=compressed_bytes, mime_type="image/jpeg"))
                         
-                        # 🚀 THE FIX: Phase 1 (Draft) Prompt mathematically matched to your fine-tuning data
+                        # 2. Phase 1: The 3 Independent Draft Analyses
                         draft_prompt = f"""Analyze the following asset based on FDM.
 Asset: Visual Charts
 Date: {live_date}
@@ -315,6 +268,7 @@ Notes: {trading_notes}"""
                         # 3. Phase 2: The Master Arbitrator Synthesis
                         status.update(label="⚖️ Master Arbitrator synthesizing consensus matrix...", state="running")
                         
+                        # 🚀 THE FIX: Forcing Asset-Specific Fundamental Connections
                         synthesis_prompt = f"""
                         You are the Master Arbitrator. Review these 3 independent FDM analyses of the attached charts (written in your native tuned format):
                         
@@ -323,6 +277,9 @@ Notes: {trading_notes}"""
                         Agent 3: {drafts[2]}
                         
                         Today's exact date is {live_date}. 
+                        LIVE BREAKING NEWS HEADLINES:
+                        {live_news}
+                        
                         Your job is to find the consensus. Eliminate any outlier targets or wildly inaccurate pivot zones. 
                         Identify the true, logical Future Pivot Zone based on actual visual wicks.
                         
@@ -336,7 +293,7 @@ Notes: {trading_notes}"""
                             "Time Context": "Session timing context",
                             "MTF Alignment": "How HTF and LTF align",
                             "Bias": "Bullish, Bearish, or Neutral",
-                            "Fundamental Context": "Based on today's date ({live_date}) and the asset shown, provide a brief 2-3 sentence macroeconomic fundamental outlook or backdrop.",
+                            "Fundamental Context": "First, identify the specific asset in the screenshots (e.g., EURUSD, XAUUSD). Then, using the Live Breaking News provided above and the user's notes, write a brutal 2-3 sentence fundamental backdrop detailing exactly how current macro events impact THIS specific asset. If the news doesn't directly mention the asset, explain how the broader risk sentiment or USD correlation is currently affecting it.",
                             "Levels": [
                               {{"Level Type": "Target 1 (Partial)", "Price Point": "First macro target in the direction of the main bias", "Condition / Notes": "What to look for here"}},
                               {{"Level Type": "Target 2 (Final)", "Price Point": "Second extended macro target in the direction of the main bias (if available)", "Condition / Notes": "What to look for here"}},
@@ -413,10 +370,8 @@ Notes: {trading_notes}"""
                                         if "Invalidation" in l_type:
                                             card_class = "level-inval"
                                         elif "Counter" in l_type:
-                                            # If main bias is Bullish, the counter target is Red (Bearish)
                                             card_class = "level-bearish" if "Bullish" in bias else ("level-bullish" if "Bearish" in bias else "level-inval")
                                         else:
-                                            # Target 1 and Target 2 match the main bias color
                                             card_class = "level-bullish" if "Bullish" in bias else ("level-bearish" if "Bearish" in bias else "level-inval")
                                         
                                         st.markdown(f"""
