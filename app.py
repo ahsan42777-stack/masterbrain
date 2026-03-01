@@ -191,7 +191,7 @@ if uploaded_files:
                         # 3. Phase 2: The Master Arbitrator Synthesis
                         status.update(label="⚖️ Master Arbitrator synthesizing consensus...", state="running")
                         
-                        # 🚀 THE FIX: Updated the JSON blueprint for strict Target verification
+                        # 🚀 THE FIX: Invalidation Zone is calculated BEFORE the Bearish Target
                         synthesis_prompt = f"""
                         You are the Master Arbitrator. Review these 3 independent FDM analyses of the attached charts:
                         
@@ -213,9 +213,9 @@ if uploaded_files:
                             "MTF Alignment": "How HTF and LTF align",
                             "Bias": "Bullish, Bearish, or Neutral",
                             "Levels": [
-                              {{"Level Type": "Bullish Target", "Price Point": "Macro target significantly ABOVE the Pivot Zone (Where price goes AFTER breaking resistance)", "Condition / Notes": "What to look for here"}},
-                              {{"Level Type": "Bearish Target", "Price Point": "Macro target significantly BELOW the Invalidation Zone (Where price goes AFTER support breaks)", "Condition / Notes": "What to look for here"}},
-                              {{"Level Type": "Invalidation Zone", "Price Point": "Exact zone", "Condition / Notes": "If this breaks, the primary bias changes"}}
+                              {{"Level Type": "Bullish Target", "Price Point": "Macro target significantly ABOVE the Pivot Zone", "Condition / Notes": "What to look for here"}},
+                              {{"Level Type": "Invalidation Zone", "Price Point": "Exact structural level that invalidates the setup", "Condition / Notes": "If this breaks, the primary bias changes"}},
+                              {{"Level Type": "Bearish Target", "Price Point": "Macro target strictly BELOW the Invalidation Zone you just defined (Where price goes AFTER invalidation breaks)", "Condition / Notes": "What to look for here"}}
                             ]
                           }}
                         }}
