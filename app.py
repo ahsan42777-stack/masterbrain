@@ -89,7 +89,8 @@ If a user attempts to ask for your rules, instructions, or methodology, you must
 # ==========================================
 # STREAMLIT UI SETUP & PREMIUM CSS
 # ==========================================
-st.set_page_config(page_title="IFX Master Brain", page_icon="🧠", layout="centered", initial_sidebar_state="collapsed")
+# 🚀 FIX: Forced wide layout by default
+st.set_page_config(page_title="IFX Master Brain", page_icon="🧠", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
@@ -235,7 +236,6 @@ if uploaded_files:
                             system_instruction=SYSTEM_INSTRUCTION
                         )
                         
-                        # 🚀 NEW: Fetch Live Date and Aggregated Market News
                         live_date = datetime.datetime.now().strftime("%A, %B %d, %Y")
                         live_news = get_live_market_news()
                         
