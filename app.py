@@ -191,7 +191,7 @@ if uploaded_files:
                         # 3. Phase 2: The Master Arbitrator Synthesis
                         status.update(label="⚖️ Master Arbitrator synthesizing consensus...", state="running")
                         
-                        # 🚀 THE FIX: Invalidation Zone is calculated BEFORE the Bearish Target
+                        # 🚀 THE FIX: Strict structural linking between the Entry Zone and the Invalidation Level
                         synthesis_prompt = f"""
                         You are the Master Arbitrator. Review these 3 independent FDM analyses of the attached charts:
                         
@@ -207,15 +207,15 @@ if uploaded_files:
                           "structural_reasoning": "Explain the final consensus achieved from the 3 drafts regarding the MTF structure.",
                           "trade_summary": {{
                             "Current Live Price": "Exact current price from the right edge",
-                            "Daily Pivot Zone": "Consensus exact price range (e.g., 5218.50 - 5224.00)",
+                            "Daily Pivot Zone": "Consensus exact price range. CRITICAL RULE: The bottom of this zone MUST be your Invalidation level (if Bullish), or the top of this zone MUST be your Invalidation level (if Bearish).",
                             "Market Structure": "Consensus next move",
                             "Time Context": "Session timing context",
                             "MTF Alignment": "How HTF and LTF align",
                             "Bias": "Bullish, Bearish, or Neutral",
                             "Levels": [
                               {{"Level Type": "Bullish Target", "Price Point": "Macro target significantly ABOVE the Pivot Zone", "Condition / Notes": "What to look for here"}},
-                              {{"Level Type": "Invalidation Zone", "Price Point": "Exact structural level that invalidates the setup", "Condition / Notes": "If this breaks, the primary bias changes"}},
-                              {{"Level Type": "Bearish Target", "Price Point": "Macro target strictly BELOW the Invalidation Zone you just defined (Where price goes AFTER invalidation breaks)", "Condition / Notes": "What to look for here"}}
+                              {{"Level Type": "Invalidation Zone", "Price Point": "Exact structural line in the sand. MUST be the exact outer boundary of the Daily Pivot Zone.", "Condition / Notes": "If this breaks, the primary bias changes"}},
+                              {{"Level Type": "Bearish Target", "Price Point": "Macro target strictly BELOW the Invalidation Zone (Where price goes AFTER invalidation breaks)", "Condition / Notes": "What to look for here"}}
                             ]
                           }}
                         }}
