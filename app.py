@@ -119,6 +119,8 @@ def log_to_google_sheets(notes, bias, raw_json):
 st.markdown('<p class="big-font">📈 IFX Master Brain</p>', unsafe_allow_html=True)
 st.caption("FDM Algorithmic Multi-Agent MTF Analyzer")
 
+st.info("⏱️ **Note:** This engine runs a 'Mixture of Experts' model, sending your charts to 3 separate AI agents before synthesizing a final Master Consensus. **This process takes at least 1 minute.** \n\n🧪 **Beta Phase:** If the system gets stuck or times out, please be patient and try running it again.")
+
 trading_notes = st.text_area("📝 Trading Notes (Optional)", placeholder="E.g., NFP in 10 mins, watching the 4H sweep. First image is 4H, second is 15M...")
 
 uploaded_files = st.file_uploader("Upload Chart Screenshots (Max 3)", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
@@ -135,8 +137,7 @@ if uploaded_files:
             if not check_rate_limit():
                 st.error("⏳ Rate Limit Exceeded! Please wait 60 seconds before analyzing.")
             else:
-                # 🚀 THE NEW MULTI-AGENT UI
-                with st.status("🧠 Initiating Multi-Agent FDM Matrix...", expanded=True) as status:
+                with st.status("🧠 Initiating Multi-Agent FDM Matrix... (Please wait ~60s)", expanded=True) as status:
                     try:
                         st.session_state.request_timestamps.append(time.time())
                         vertexai.init(project=PROJECT_ID, location=REGION)
@@ -152,7 +153,7 @@ if uploaded_files:
                             if image.mode in ("RGBA", "P"):
                                 image = image.convert("RGB")
                             
-                            # 🚀 CROP FIX: Removes the top 70 pixels to hide TradingView OHLC text
+                            # CROP FIX: Removes the top 70 pixels to hide TradingView OHLC text
                             width, height = image.size
                             image = image.crop((0, 70, width, height))
                             
@@ -178,10 +179,16 @@ if uploaded_files:
                         drafts = []
                         for i in range(3):
                             status.update(label=f"🕵️‍♂️ AI Analyst {i+1} evaluating MTF structure...", state="running")
-                            # We use a slightly higher temperature (0.4) so each agent thinks a little differently
-                            response = master_brain.generate_content([draft_prompt] + image_parts, generation_config={"temperature": 0.4})
-                            drafts.append(response.text)
-                            time.sleep(1) # Prevent API rate limit overloading
+                            try:
+                                response = master_brain.generate_content([draft_prompt] + image_parts, generation_config={"temperature": 0.4})
+                                drafts.append(response.text)
+                                # 🚀 FIX: Increased sleep time to dodge Google Cloud's rate limit freezing
+                                time.sleep(5) 
+                            except Exception as agent_error:
+                                # 🚀 FIX: If an agent hits a rate limit, gracefully skip it instead of crashing
+                                st.warning(f"⚠️ Agent {i+1} hit a server delay. Proceeding with remaining agents.")
+                                drafts.append(f"Agent {i+1} was delayed. Rely on the consensus of the other agents.")
+                                time.sleep(5)
                             
                         # 3. Phase 2: The Master Arbitrator Synthesis
                         status.update(label="⚖️ Master Arbitrator synthesizing consensus...", state="running")
@@ -215,7 +222,6 @@ if uploaded_files:
                         }}
                         """
                         
-                        # Temperature 0.1 for strict, mathematical JSON formatting on the final output
                         final_response = master_brain.generate_content([synthesis_prompt] + image_parts, generation_config={"temperature": 0.1})
                         raw_text = final_response.text
                         
@@ -281,4 +287,5 @@ if uploaded_files:
                             log_to_google_sheets(trading_notes, "JSON Decode Error", raw_text)
                             
                     except Exception as e:
-                        st.error(f"An error occurred: {e}")
+                        st.error(f"❌ An error occurred during processing: {e}")
+                        st.warning("🔄 **The IFX Master Brain is currently in Beta.** If the system timed out or got stuck, please hit 'Run FDM Analysis' to retry.")
