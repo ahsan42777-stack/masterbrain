@@ -68,7 +68,12 @@ st.markdown("""
     /* Typography & Accents */
     h1, h2, h3 { color: #ffffff !important; font-weight: 700 !important; }
     .neon-text { color: #00d26a; text-shadow: 0 0 10px rgba(0, 210, 106, 0.4); }
-    .sub-text { color: #94a3b8; font-size: 14px; }
+    .sub-text { color: #94a3b8; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;}
+    
+    /* 🚀 FIX: Force all Streamlit labels and standard text to Light Gray so it is readable */
+    label, .st-emotion-cache-10trncz, p, .stMarkdown p {
+        color: #cbd5e1 !important;
+    }
     
     /* Login Terminal Card */
     .login-container {
@@ -82,6 +87,40 @@ st.markdown("""
         margin-top: 50px;
     }
     
+    /* Force Input Boxes to Dark Mode */
+    .stTextInput input, .stTextArea textarea {
+        background-color: #1e293b !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+    .stTextInput input:focus, .stTextArea textarea:focus {
+        border: 1px solid #00d26a !important;
+        box-shadow: 0 0 10px rgba(0, 210, 106, 0.2) !important;
+    }
+
+    /* Force File Uploader & its internal text to Dark Mode */
+    [data-testid="stFileUploadDropzone"] {
+        background-color: #1e293b !important;
+        border: 1px dashed rgba(255, 255, 255, 0.2) !important;
+    }
+    [data-testid="stFileUploadDropzone"] * {
+        color: #e2e8f0 !important;
+    }
+    [data-testid="stFileUploadDropzone"]:hover {
+        border: 1px dashed #00d26a !important;
+        background-color: rgba(0, 210, 106, 0.05) !important;
+    }
+    
+    /* Force Status/Expander Boxes to Dark Mode */
+    [data-testid="stStatusWidget"], [data-testid="stExpander"] {
+        background-color: #1e293b !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #ffffff !important;
+    }
+    [data-testid="stStatusWidget"] *, [data-testid="stExpander"] * {
+        color: #e2e8f0 !important; 
+    }
+
     /* Dashboard Glassmorphism Cards */
     .glass-card {
         background: rgba(30, 41, 59, 0.5);
@@ -115,22 +154,25 @@ st.markdown("""
     .level-bearish { border-left: 5px solid #ff4b4b; }
     .level-inval { border-left: 5px solid #f97316; }
     
-    .level-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #cbd5e1; margin-bottom: 4px; }
-    .level-price { font-size: 24px; font-weight: bold; color: #ffffff; margin-bottom: 8px; font-family: 'Courier New', monospace;}
-    .level-note { font-size: 13px; color: #94a3b8; font-style: italic; }
+    .level-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #cbd5e1 !important; margin-bottom: 4px; }
+    .level-price { font-size: 24px; font-weight: bold; color: #ffffff !important; margin-bottom: 8px; font-family: 'Courier New', monospace;}
+    .level-note { font-size: 13px; color: #94a3b8 !important; font-style: italic; }
 
     /* Custom Streamlit Button Styling Overrides */
     div.stButton > button:first-child {
-        background-color: #00d26a;
-        color: #000000;
+        background-color: #00d26a !important;
+        color: #000000 !important;
         font-weight: bold;
         border-radius: 8px;
         border: none;
         padding: 10px 20px;
         transition: all 0.3s ease;
     }
+    div.stButton > button:first-child p {
+        color: #000000 !important; 
+    }
     div.stButton > button:first-child:hover {
-        background-color: #00e676;
+        background-color: #00e676 !important;
         box-shadow: 0 0 15px rgba(0, 210, 106, 0.4);
         transform: translateY(-2px);
     }
@@ -149,7 +191,7 @@ if not st.session_state.authenticated:
         st.markdown("""
             <div class="login-container">
                 <h1 style="margin-bottom: 0;">🧠 IFX MASTER <span class="neon-text">BRAIN</span></h1>
-                <p class="sub-text">FDM Algorithmic Multi-Agent Engine</p>
+                <p class="sub-text" style="color:#94a3b8;">FDM Algorithmic Multi-Agent Engine</p>
                 <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
                 <p style="color: #cbd5e1; font-size: 14px;">Secure Gateway. Authorized Personnel Only.</p>
             </div>
@@ -227,6 +269,9 @@ if uploaded_files:
                             system_instruction=SYSTEM_INSTRUCTION
                         )
                         
+                        # Fetch Live Date for Fundamental Context
+                        live_date = datetime.datetime.now().strftime("%A, %B %d, %Y")
+                        
                         # 1. Image Processing & Cropping
                         image_parts = []
                         for file in uploaded_files:
@@ -279,6 +324,7 @@ if uploaded_files:
                         Agent 2: {drafts[1]}
                         Agent 3: {drafts[2]}
                         
+                        Today's exact date is {live_date}. 
                         Your job is to find the consensus. Eliminate any outlier targets or wildly inaccurate pivot zones. 
                         Identify the true, logical Future Pivot Zone based on actual visual wicks.
                         
@@ -292,6 +338,7 @@ if uploaded_files:
                             "Time Context": "Session timing context",
                             "MTF Alignment": "How HTF and LTF align",
                             "Bias": "Bullish, Bearish, or Neutral",
+                            "Fundamental Context": "Based on today's date ({live_date}) and the asset shown, provide a brief 2-3 sentence macroeconomic fundamental outlook or backdrop.",
                             "Levels": [
                               {{"Level Type": "Bullish Target", "Price Point": "Macro target significantly ABOVE the Pivot Zone", "Condition / Notes": "What to look for here"}},
                               {{"Level Type": "Invalidation Zone", "Price Point": "Exact structural line in the sand. MUST be the exact outer boundary of the Daily Pivot Zone.", "Condition / Notes": "If this breaks, the primary bias changes"}},
@@ -355,6 +402,12 @@ if uploaded_files:
                                     
                                     mtf = summary.get("MTF Alignment", data.get("deduced_mtf_alignment", "N/A"))
                                     st.markdown(f"<div class='glass-card'><span class='sub-text'>📐 MTF ALIGNMENT</span><br>{mtf}</div>", unsafe_allow_html=True)
+
+                                    # 🚀 NEW: Fundamental Context
+                                    fundies = summary.get("Fundamental Context", "")
+                                    if fundies:
+                                        st.markdown(f"<div class='glass-card' style='border-left: 4px solid #a855f7;'><span class='sub-text'>🌍 MACRO FUNDAMENTALS ({live_date})</span><br>{fundies}</div>", unsafe_allow_html=True)
+
 
                                 with col_right:
                                     st.markdown("### 🎯 MACRO ZONES")
