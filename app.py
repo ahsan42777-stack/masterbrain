@@ -70,7 +70,7 @@ st.markdown("""
     .neon-text { color: #00d26a; text-shadow: 0 0 10px rgba(0, 210, 106, 0.4); }
     .sub-text { color: #94a3b8; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;}
     
-    /* 🚀 FIX: Force all Streamlit labels and standard text to Light Gray so it is readable */
+    /* Force all Streamlit labels and standard text to Light Gray so it is readable */
     label, .st-emotion-cache-10trncz, p, .stMarkdown p {
         color: #cbd5e1 !important;
     }
@@ -298,7 +298,7 @@ if uploaded_files:
                         Analyze these structurally. Do NOT output JSON yet. Just write a highly detailed paragraph analyzing:
                         1. The exact live price anchored on the right edge.
                         2. The MTF Market Structure and Session timing.
-                        3. The visual structural wicks to determine the true Daily Pivot Zone, Macro Bullish Target, and Macro Bearish Invalidation. Do not use ranges larger than what makes structural sense.
+                        3. The visual structural wicks to determine the true Daily Pivot Zone, Macro Targets, and Invalidation. Do not use ranges larger than what makes structural sense.
                         Notes: {trading_notes}
                         """
                         
@@ -317,6 +317,7 @@ if uploaded_files:
                         # 3. Phase 2: The Master Arbitrator Synthesis
                         status.update(label="⚖️ Master Arbitrator synthesizing consensus matrix...", state="running")
                         
+                        # 🚀 NEW: The prompt now dynamically asks for 2 Targets and a Counter-Bias Target
                         synthesis_prompt = f"""
                         You are the Master Arbitrator. Review these 3 independent FDM analyses of the attached charts:
                         
@@ -340,9 +341,10 @@ if uploaded_files:
                             "Bias": "Bullish, Bearish, or Neutral",
                             "Fundamental Context": "Based on today's date ({live_date}) and the asset shown, provide a brief 2-3 sentence macroeconomic fundamental outlook or backdrop.",
                             "Levels": [
-                              {{"Level Type": "Bullish Target", "Price Point": "Macro target significantly ABOVE the Pivot Zone", "Condition / Notes": "What to look for here"}},
+                              {{"Level Type": "Target 1 (Partial)", "Price Point": "First macro target in the direction of the main bias", "Condition / Notes": "What to look for here"}},
+                              {{"Level Type": "Target 2 (Final)", "Price Point": "Second extended macro target in the direction of the main bias (if available)", "Condition / Notes": "What to look for here"}},
                               {{"Level Type": "Invalidation Zone", "Price Point": "Exact structural line in the sand. MUST be the exact outer boundary of the Daily Pivot Zone.", "Condition / Notes": "If this breaks, the primary bias changes"}},
-                              {{"Level Type": "Bearish Target", "Price Point": "Macro target strictly BELOW the Invalidation Zone (Where price goes AFTER invalidation breaks)", "Condition / Notes": "What to look for here"}}
+                              {{"Level Type": "Counter-Bias Target", "Price Point": "Macro target strictly BEYOND the Invalidation Zone (Where price goes AFTER invalidation breaks)", "Condition / Notes": "What to look for here"}}
                             ]
                           }}
                         }}
@@ -403,12 +405,6 @@ if uploaded_files:
                                     mtf = summary.get("MTF Alignment", data.get("deduced_mtf_alignment", "N/A"))
                                     st.markdown(f"<div class='glass-card'><span class='sub-text'>📐 MTF ALIGNMENT</span><br>{mtf}</div>", unsafe_allow_html=True)
 
-                                    # 🚀 NEW: Fundamental Context
-                                    fundies = summary.get("Fundamental Context", "")
-                                    if fundies:
-                                        st.markdown(f"<div class='glass-card' style='border-left: 4px solid #a855f7;'><span class='sub-text'>🌍 MACRO FUNDAMENTALS ({live_date})</span><br>{fundies}</div>", unsafe_allow_html=True)
-
-
                                 with col_right:
                                     st.markdown("### 🎯 MACRO ZONES")
                                     for level in summary.get("Levels", []):
@@ -416,8 +412,15 @@ if uploaded_files:
                                         price = level.get('Price Point', 'N/A')
                                         note = level.get('Condition / Notes', '')
                                         
-                                        # Determine CSS class based on level type
-                                        card_class = "level-bullish" if "Bullish" in l_type else ("level-bearish" if "Bearish" in l_type else "level-inval")
+                                        # 🚀 NEW: Smart color logic that adapts based on the main bias
+                                        if "Invalidation" in l_type:
+                                            card_class = "level-inval"
+                                        elif "Counter" in l_type:
+                                            # If main bias is Bullish, the counter target is Red (Bearish)
+                                            card_class = "level-bearish" if "Bullish" in bias else ("level-bullish" if "Bearish" in bias else "level-inval")
+                                        else:
+                                            # Target 1 and Target 2 match the main bias color
+                                            card_class = "level-bullish" if "Bullish" in bias else ("level-bearish" if "Bearish" in bias else "level-inval")
                                         
                                         st.markdown(f"""
                                         <div class="level-card {card_class}">
@@ -426,7 +429,12 @@ if uploaded_files:
                                             <div class="level-note">{note}</div>
                                         </div>
                                         """, unsafe_allow_html=True)
-                                    
+                                
+                                # 🚀 NEW: Full-width Fundamental Context Box (Below the columns)
+                                fundies = summary.get("Fundamental Context", "")
+                                if fundies:
+                                    st.markdown(f"<div class='glass-card' style='border-left: 4px solid #a855f7; margin-top: 20px;'><span class='sub-text'>🌍 MACRO FUNDAMENTALS ({live_date})</span><br>{fundies}</div>", unsafe_allow_html=True)
+
                                 st.divider()
                                 with st.expander("⚙️ View Developer Raw Output (JSON)"):
                                     st.code(raw_text, language="json")
