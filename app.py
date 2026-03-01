@@ -182,10 +182,8 @@ if uploaded_files:
                             try:
                                 response = master_brain.generate_content([draft_prompt] + image_parts, generation_config={"temperature": 0.4})
                                 drafts.append(response.text)
-                                # 🚀 FIX: Increased sleep time to dodge Google Cloud's rate limit freezing
                                 time.sleep(5) 
                             except Exception as agent_error:
-                                # 🚀 FIX: If an agent hits a rate limit, gracefully skip it instead of crashing
                                 st.warning(f"⚠️ Agent {i+1} hit a server delay. Proceeding with remaining agents.")
                                 drafts.append(f"Agent {i+1} was delayed. Rely on the consensus of the other agents.")
                                 time.sleep(5)
@@ -193,6 +191,7 @@ if uploaded_files:
                         # 3. Phase 2: The Master Arbitrator Synthesis
                         status.update(label="⚖️ Master Arbitrator synthesizing consensus...", state="running")
                         
+                        # 🚀 THE FIX: Updated the JSON blueprint for strict Target verification
                         synthesis_prompt = f"""
                         You are the Master Arbitrator. Review these 3 independent FDM analyses of the attached charts:
                         
@@ -214,8 +213,8 @@ if uploaded_files:
                             "MTF Alignment": "How HTF and LTF align",
                             "Bias": "Bullish, Bearish, or Neutral",
                             "Levels": [
-                              {{"Level Type": "Bullish Target", "Price Point": "Macro target if price pushes up", "Condition / Notes": "What to look for here"}},
-                              {{"Level Type": "Bearish Target", "Price Point": "Macro target if price breaks down", "Condition / Notes": "What to look for here"}},
+                              {{"Level Type": "Bullish Target", "Price Point": "Macro target significantly ABOVE the Pivot Zone (Where price goes AFTER breaking resistance)", "Condition / Notes": "What to look for here"}},
+                              {{"Level Type": "Bearish Target", "Price Point": "Macro target significantly BELOW the Invalidation Zone (Where price goes AFTER support breaks)", "Condition / Notes": "What to look for here"}},
                               {{"Level Type": "Invalidation Zone", "Price Point": "Exact zone", "Condition / Notes": "If this breaks, the primary bias changes"}}
                             ]
                           }}
