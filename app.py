@@ -270,7 +270,7 @@ if uploaded_files:
                         )
                         
                         # Fetch Live Date for Fundamental Context
-                        live_date = datetime.datetime.now().strftime("%A, %B %d, %Y")
+                        live_date = datetime.datetime.now().strftime("%d %B %Y")
                         
                         # 1. Image Processing & Cropping
                         image_parts = []
@@ -293,14 +293,12 @@ if uploaded_files:
                             compressed_bytes = img_byte_arr.getvalue()
                             image_parts.append(Part.from_data(data=compressed_bytes, mime_type="image/jpeg"))
                         
-                        # 2. Phase 1: The 3 Independent Draft Analyses
-                        draft_prompt = f"""
-                        Analyze these structurally. Do NOT output JSON yet. Just write a highly detailed paragraph analyzing:
-                        1. The exact live price anchored on the right edge.
-                        2. The MTF Market Structure and Session timing.
-                        3. The visual structural wicks to determine the true Daily Pivot Zone, Macro Targets, and Invalidation. Do not use ranges larger than what makes structural sense.
-                        Notes: {trading_notes}
-                        """
+                        # 🚀 THE FIX: Phase 1 (Draft) Prompt mathematically matched to your fine-tuning data
+                        draft_prompt = f"""Analyze the following asset based on FDM.
+Asset: Visual Charts
+Date: {live_date}
+Provide the Pivot, Targets, and Bias.
+Notes: {trading_notes}"""
                         
                         drafts = []
                         for i in range(3):
@@ -317,9 +315,8 @@ if uploaded_files:
                         # 3. Phase 2: The Master Arbitrator Synthesis
                         status.update(label="⚖️ Master Arbitrator synthesizing consensus matrix...", state="running")
                         
-                        # 🚀 NEW: The prompt now dynamically asks for 2 Targets and a Counter-Bias Target
                         synthesis_prompt = f"""
-                        You are the Master Arbitrator. Review these 3 independent FDM analyses of the attached charts:
+                        You are the Master Arbitrator. Review these 3 independent FDM analyses of the attached charts (written in your native tuned format):
                         
                         Agent 1: {drafts[0]}
                         Agent 2: {drafts[1]}
@@ -412,7 +409,7 @@ if uploaded_files:
                                         price = level.get('Price Point', 'N/A')
                                         note = level.get('Condition / Notes', '')
                                         
-                                        # 🚀 NEW: Smart color logic that adapts based on the main bias
+                                        # Smart color logic that adapts based on the main bias
                                         if "Invalidation" in l_type:
                                             card_class = "level-inval"
                                         elif "Counter" in l_type:
@@ -430,7 +427,7 @@ if uploaded_files:
                                         </div>
                                         """, unsafe_allow_html=True)
                                 
-                                # 🚀 NEW: Full-width Fundamental Context Box (Below the columns)
+                                # Full-width Fundamental Context Box (Below the columns)
                                 fundies = summary.get("Fundamental Context", "")
                                 if fundies:
                                     st.markdown(f"<div class='glass-card' style='border-left: 4px solid #a855f7; margin-top: 20px;'><span class='sub-text'>🌍 MACRO FUNDAMENTALS ({live_date})</span><br>{fundies}</div>", unsafe_allow_html=True)
