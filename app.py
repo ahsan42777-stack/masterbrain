@@ -63,31 +63,42 @@ def get_live_market_news():
     return "\n".join(headlines)
 
 def get_live_candles(ticker, timeframe_choice):
-    """🚀 NEW: Dynamically fetches 1D, 1H, or Both based on user UI selection"""
+    """🚀 NEW: Dynamically maps the user's UI selection to yfinance intervals (Now including 4H)"""
     if not ticker or "UNKNOWN" in ticker.upper():
         return "No statistical ticker detected or provided. Relying purely on visual chart analysis."
     
     try:
         output_tables = []
         
-        # Fetch Daily Data if requested
-        if "1D" in timeframe_choice:
-            data_1d = yf.download(ticker, period="5d", interval="1d")
-            if not data_1d.empty:
-                df_1d = data_1d[['Open', 'High', 'Low', 'Close']].copy()
-                df_1d.index = df_1d.index.strftime('%Y-%m-%d')
-                output_tables.append("=== DAILY (1D) CANDLES (Last 5 Sessions) ===\n" + df_1d.round(4).to_string())
+        tf_mapping = {
+            "1m": "1m",
+            "5m": "5m",
+            "15m": "15m",
+            "1H": "1h",
+            "4H": "4h",
+            "1D": "1d"
+        }
         
-        # Fetch 1-Hour Data if requested
-        if "1H" in timeframe_choice:
-            data_1h = yf.download(ticker, period="5d", interval="1h")
-            if not data_1h.empty:
-                df_1h = data_1h[['Open', 'High', 'Low', 'Close']].copy()
-                df_1h.index = df_1h.index.strftime('%Y-%m-%d %H:%M')
-                output_tables.append("=== 1-HOUR (1H) CANDLES (Last 5 Days) ===\n" + df_1h.round(4).to_string())
+        for ui_label, yf_interval in tf_mapping.items():
+            if ui_label in timeframe_choice:
+                # We pull enough data to be safe, but we will trim the dataframe to prevent token overload
+                data = yf.download(ticker, period="1mo" if yf_interval in ["1d", "4h"] else "5d", interval=yf_interval)
+                
+                if not data.empty:
+                    df = data[['Open', 'High', 'Low', 'Close']].copy()
+                    
+                    # 🚀 SECURITY FIX: Restrict to the last 30 candles so we don't blow up the AI token limit
+                    df = df.tail(30)
+                    
+                    if yf_interval in ['1d']:
+                        df.index = df.index.strftime('%Y-%m-%d')
+                    else:
+                        df.index = df.index.strftime('%Y-%m-%d %H:%M')
+                        
+                    output_tables.append(f"=== {ui_label} CANDLES (Last 30 Sessions) ===\n" + df.round(4).to_string())
                 
         if not output_tables:
-            return f"Warning: Could not fetch data for ticker '{ticker}'."
+            return f"Warning: Could not fetch data for ticker '{ticker}'. (Note: Yahoo Finance restricts 1m data outside market hours for some assets)."
             
         return "\n\n".join(output_tables)
     except Exception as e:
@@ -149,7 +160,6 @@ st.markdown("""
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 210, 106, 0.1); margin-top: 50px;
     }
     
-    /* 🚀 NEW: Ensures Dropdowns look premium in Dark Mode */
     .stSelectbox div[data-baseweb="select"] > div { background-color: #1e293b !important; color: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; }
     
     .stTextInput input, .stTextArea textarea { background-color: #1e293b !important; color: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; }
@@ -253,8 +263,21 @@ with st.container(border=True):
     with col_input1:
         st.markdown("### 📊 Statistical Feed")
         ticker_input = st.text_input("Asset Ticker", placeholder="Leave blank for AI Auto-Detect")
-        # 🚀 NEW: Dropdown for Timeframe selection
-        tf_selection = st.selectbox("Statistical Timeframe", ["1D (Macro)", "1H (Intraday)", "1D + 1H (Hybrid Alignment)"], index=2)
+        
+        # 🚀 FIX: Dropdown defaults to Index 8, which is "4H + 1H (Swing + Intraday Hybrid)"
+        tf_options = [
+            "1D (Macro)",                         # 0
+            "4H (Swing)",                         # 1
+            "1H (Intraday)",                      # 2
+            "15m (Day Trading)",                  # 3
+            "5m (Scalping)",                      # 4
+            "1m (Micro Scalping)",                # 5
+            "1D + 4H (Macro + Swing Hybrid)",     # 6
+            "1D + 1H (Macro + Intraday Hybrid)",  # 7
+            "4H + 1H (Swing + Intraday Hybrid)",  # 8  <-- Default
+            "1H + 15m (Intraday + Scalp Hybrid)"  # 9
+        ]
+        tf_selection = st.selectbox("Statistical Timeframe", tf_options, index=8)
         st.caption("Leave blank, or manually override (e.g., EURUSD=X)")
         
     with col_input2:
@@ -325,8 +348,6 @@ if uploaded_files:
                         status.update(label="📡 Fetching Live Macro & Statistical OHLC Data...", state="running")
                         live_date = datetime.datetime.now().strftime("%A, %B %d, %Y")
                         live_news = get_live_market_news()
-                        
-                        # 🚀 NEW: Passes both the Ticker AND the Dropdown selection to the function
                         live_candles = get_live_candles(ticker_to_use, tf_selection)
                         
                         # 2. Phase 1: The 3 Independent Draft Analyses
