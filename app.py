@@ -63,7 +63,7 @@ def get_live_market_news():
     return "\n".join(headlines)
 
 def get_live_candles(ticker, timeframe_choice):
-    """🚀 NEW: Dynamically maps the user's UI selection to yfinance intervals (Now including 4H)"""
+    """Dynamically maps the user's UI selection to yfinance intervals"""
     if not ticker or "UNKNOWN" in ticker.upper():
         return "No statistical ticker detected or provided. Relying purely on visual chart analysis."
     
@@ -81,13 +81,12 @@ def get_live_candles(ticker, timeframe_choice):
         
         for ui_label, yf_interval in tf_mapping.items():
             if ui_label in timeframe_choice:
-                # We pull enough data to be safe, but we will trim the dataframe to prevent token overload
                 data = yf.download(ticker, period="1mo" if yf_interval in ["1d", "4h"] else "5d", interval=yf_interval)
                 
                 if not data.empty:
                     df = data[['Open', 'High', 'Low', 'Close']].copy()
                     
-                    # 🚀 SECURITY FIX: Restrict to the last 30 candles so we don't blow up the AI token limit
+                    # Restrict to the last 30 candles so we don't blow up the AI token limit
                     df = df.tail(30)
                     
                     if yf_interval in ['1d']:
@@ -98,7 +97,7 @@ def get_live_candles(ticker, timeframe_choice):
                     output_tables.append(f"=== {ui_label} CANDLES (Last 30 Sessions) ===\n" + df.round(4).to_string())
                 
         if not output_tables:
-            return f"Warning: Could not fetch data for ticker '{ticker}'. (Note: Yahoo Finance restricts 1m data outside market hours for some assets)."
+            return f"Warning: Could not fetch data for ticker '{ticker}'."
             
         return "\n\n".join(output_tables)
     except Exception as e:
@@ -186,6 +185,9 @@ st.markdown("""
     .level-price { font-size: 24px; font-weight: bold; color: #ffffff !important; margin-bottom: 8px; font-family: 'Courier New', monospace;}
     .level-note { font-size: 13px; color: #94a3b8 !important; font-style: italic; }
 
+    /* Force Radio Buttons to look premium */
+    div.row-widget.stRadio > div{ flex-direction:row; background: rgba(30, 41, 59, 0.5); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+
     div.stButton > button:first-child { background-color: #00d26a !important; color: #000000 !important; font-weight: bold; border-radius: 8px; border: none; padding: 10px 20px; transition: all 0.3s ease; }
     div.stButton > button:first-child p { color: #000000 !important; }
     div.stButton > button:first-child:hover { background-color: #00e676 !important; box-shadow: 0 0 15px rgba(0, 210, 106, 0.4); transform: translateY(-2px); }
@@ -256,33 +258,33 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-st.info("⏱️ **BETA PHASE PROTOCOL:** The MoE (Mixture of Experts) array requires ~60 seconds to process 3 independent visual agents and parse live OHLC statistical data.")
-
 with st.container(border=True):
     col_input1, col_input2 = st.columns([1, 2])
     with col_input1:
         st.markdown("### 📊 Statistical Feed")
         ticker_input = st.text_input("Asset Ticker", placeholder="Leave blank for AI Auto-Detect")
         
-        # 🚀 FIX: Dropdown defaults to Index 8, which is "4H + 1H (Swing + Intraday Hybrid)"
         tf_options = [
-            "1D (Macro)",                         # 0
-            "4H (Swing)",                         # 1
-            "1H (Intraday)",                      # 2
-            "15m (Day Trading)",                  # 3
-            "5m (Scalping)",                      # 4
-            "1m (Micro Scalping)",                # 5
-            "1D + 4H (Macro + Swing Hybrid)",     # 6
-            "1D + 1H (Macro + Intraday Hybrid)",  # 7
-            "4H + 1H (Swing + Intraday Hybrid)",  # 8  <-- Default
-            "1H + 15m (Intraday + Scalp Hybrid)"  # 9
+            "1D (Macro)",                         
+            "4H (Swing)",                         
+            "1H (Intraday)",                      
+            "15m (Day Trading)",                  
+            "5m (Scalping)",                      
+            "1m (Micro Scalping)",                
+            "1D + 4H (Macro + Swing Hybrid)",     
+            "1D + 1H (Macro + Intraday Hybrid)",  
+            "4H + 1H (Swing + Intraday Hybrid)",  
+            "1H + 15m (Intraday + Scalp Hybrid)"  
         ]
         tf_selection = st.selectbox("Statistical Timeframe", tf_options, index=8)
-        st.caption("Leave blank, or manually override (e.g., EURUSD=X)")
+        
+        # 🚀 NEW: Execution Engine Toggle
+        st.write("")
+        exec_mode = st.radio("Execution Engine Speed", ["⚡ Lightning (1 Agent)", "🧠 Deep Consensus (3 Agents)"], index=0)
         
     with col_input2:
         st.markdown("### 📝 Contextual Feed")
-        trading_notes = st.text_area("Qualitative Input (Optional)", placeholder="E.g., NFP in 10 mins, watching the 4H sweep...")
+        trading_notes = st.text_area("Qualitative Input (Optional)", placeholder="E.g., NFP in 10 mins, watching the 4H sweep...", height=230)
 
     st.markdown("### 📸 Visual Feed")
     uploaded_files = st.file_uploader("Upload MTF Chart Array (Max 3)", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
@@ -297,11 +299,11 @@ if uploaded_files:
             cols[i].image(file, caption=f"Data Node {i+1}", use_container_width=True)
         
         st.write("")
-        if st.button("▶ EXECUTE MULTI-AGENT SYNTHESIS", use_container_width=True):
+        if st.button("▶ EXECUTE FDM MATRIX", use_container_width=True):
             if not check_rate_limit():
                 st.error("⏳ RATE LIMIT ACTIVE: Please wait 60 seconds before executing another request.")
             else:
-                with st.status("🧠 Initiating Hybrid FDM Matrix... (Please wait ~60s)", expanded=True) as status:
+                with st.status("🧠 Initiating Hybrid Matrix...", expanded=True) as status:
                     try:
                         st.session_state.request_timestamps.append(time.time())
                         vertexai.init(project=PROJECT_ID, location=REGION)
@@ -310,7 +312,7 @@ if uploaded_files:
                             system_instruction=SYSTEM_INSTRUCTION
                         )
                         
-                        # 1. Image Processing & Cropping
+                        # Image Processing & Cropping
                         image_parts = []
                         for file in uploaded_files:
                             image = Image.open(file)
@@ -350,7 +352,7 @@ if uploaded_files:
                         live_news = get_live_market_news()
                         live_candles = get_live_candles(ticker_to_use, tf_selection)
                         
-                        # 2. Phase 1: The 3 Independent Draft Analyses
+                        # Draft Phase (Dynamic Agent Count)
                         draft_prompt = f"""Analyze the following asset based on FDM.
 Asset: Visual Charts + Ticker {ticker_to_use}
 Date: {live_date}
@@ -361,38 +363,41 @@ RAW STATISTICAL DATA:
 Provide the Pivot, Targets, and Bias.
 Notes: {trading_notes}"""
                         
+                        # 🚀 NEW: Dynamically select 1 or 3 agents based on the toggle!
+                        num_agents = 3 if "Deep" in exec_mode else 1
                         drafts = []
-                        for i in range(3):
-                            status.update(label=f"🕵️‍♂️ AI Analyst {i+1} synthesizing Visual + Statistical Data...", state="running")
+                        
+                        for i in range(num_agents):
+                            status.update(label=f"🕵️‍♂️ AI Analyst {i+1}/{num_agents} synthesizing Visual + Statistical Data...", state="running")
                             try:
                                 response = master_brain.generate_content([draft_prompt] + image_parts, generation_config={"temperature": 0.4})
                                 drafts.append(response.text)
-                                time.sleep(5) 
+                                time.sleep(2) # Shorter sleep to speed up execution
                             except Exception as agent_error:
-                                st.warning(f"⚠️ Agent {i+1} latency hit. Compensating with remaining nodes.")
-                                drafts.append(f"Agent {i+1} was delayed. Rely on the consensus of the other agents.")
-                                time.sleep(5)
+                                st.warning(f"⚠️ Agent {i+1} latency hit. Compensating.")
+                                drafts.append(f"Agent {i+1} delayed.")
+                                time.sleep(2)
                             
-                        # 3. Phase 2: The Master Arbitrator Synthesis
-                        status.update(label="⚖️ Master Arbitrator synthesizing consensus matrix...", state="running")
+                        # Master Arbitrator Synthesis
+                        status.update(label="⚖️ Master Arbitrator formatting consensus matrix...", state="running")
+                        
+                        # Dynamically inject the drafts into the Arbitrator prompt
+                        agent_texts = "\n".join([f"Agent {i+1}: {drafts[i]}" for i in range(len(drafts))])
                         
                         synthesis_prompt = f"""
-                        You are the Master Arbitrator. Review these 3 independent FDM analyses of the attached charts (written in your native tuned format):
+                        You are the Master Arbitrator. Review the independent FDM analysis of the attached charts:
                         
-                        Agent 1: {drafts[0]}
-                        Agent 2: {drafts[1]}
-                        Agent 3: {drafts[2]}
+                        {agent_texts}
                         
                         Today's exact date is {live_date}. 
                         LIVE BREAKING NEWS HEADLINES:
                         {live_news}
                         
-                        Your job is to find the consensus. Eliminate any outlier targets or wildly inaccurate pivot zones. 
-                        Identify the true, logical Future Pivot Zone. Anchor your levels precisely to the structural visual wicks OR the mathematical highs/lows provided in the raw data.
+                        Your job is to find the true, logical Future Pivot Zone. Anchor your levels precisely to the structural visual wicks OR the mathematical highs/lows provided in the raw data.
                         
                         You MUST output a valid JSON exactly matching this structure:
                         {{
-                          "structural_reasoning": "Explain the final consensus achieved from the 3 drafts regarding the MTF structure.",
+                          "structural_reasoning": "Explain the final consensus achieved from the drafts regarding the MTF structure.",
                           "trade_summary": {{
                             "Current Live Price": "Exact current price from the right edge",
                             "Daily Pivot Zone": "Consensus exact price range. CRITICAL RULE: The bottom of this zone MUST be your Invalidation level (if Bullish), or the top of this zone MUST be your Invalidation level (if Bearish).",
@@ -414,9 +419,9 @@ Notes: {trading_notes}"""
                         final_response = master_brain.generate_content([synthesis_prompt] + image_parts, generation_config={"temperature": 0.1})
                         raw_text = final_response.text
                         
-                        status.update(label="✅ Consensus reached! Matrix calculated.", state="complete")
+                        status.update(label="✅ Matrix calculated.", state="complete")
                         
-                        # 4. Render UI
+                        # Render UI
                         try:
                             match = re.search(r'```(?:json)?\n?(.*?)\n?```', raw_text, re.DOTALL)
                             json_str = match.group(1) if match else raw_text
