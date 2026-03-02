@@ -12,7 +12,7 @@ from PIL import Image
 import streamlit as st
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part
-import yfinance as yf  # 🚀 NEW: Live Statistical Market Data
+import yfinance as yf
 
 # ==========================================
 # SECRET KEY INJECTION
@@ -40,7 +40,7 @@ except KeyError:
 # LIVE DATA FETCHERS & UTILS
 # ==========================================
 def get_live_market_news():
-    """Aggregates live breaking news from multiple financial terminals"""
+    """Aggregates live breaking news from multiple financial terminals to mimic FinancialJuice"""
     headlines = []
     feeds = [
         ('ForexLive', 'https://www.forexlive.com/feed/news'),
@@ -59,29 +59,41 @@ def get_live_market_news():
         except Exception:
             continue 
     if not headlines:
-        return "- Live news feeds temporarily unavailable."
+        return "- Live news feeds temporarily unavailable. Rely solely on technicals."
     return "\n".join(headlines)
 
-def get_live_candles(ticker):
-    """🚀 NEW: Fetches live OHLC statistical data to ground the AI's visual analysis"""
-    if not ticker:
-        return "No statistical ticker provided by user. Relying purely on visual chart analysis."
+def get_live_candles(ticker, timeframe_choice):
+    """🚀 NEW: Dynamically fetches 1D, 1H, or Both based on user UI selection"""
+    if not ticker or "UNKNOWN" in ticker.upper():
+        return "No statistical ticker detected or provided. Relying purely on visual chart analysis."
+    
     try:
-        # Download the last 5 days of price action
-        data = yf.download(ticker, period="5d", interval="1d")
-        if data.empty:
-            return f"Warning: Could not fetch data for ticker '{ticker}'. Ensure standard Yahoo Finance formatting (e.g., EURUSD=X, GC=F, BTC-USD)."
+        output_tables = []
         
-        # Clean up the dataframe for the AI prompt
-        df_clean = data[['Open', 'High', 'Low', 'Close']].copy()
-        df_clean.index = df_clean.index.strftime('%Y-%m-%d')
-        df_clean = df_clean.round(4)
-        return df_clean.to_string()
+        # Fetch Daily Data if requested
+        if "1D" in timeframe_choice:
+            data_1d = yf.download(ticker, period="5d", interval="1d")
+            if not data_1d.empty:
+                df_1d = data_1d[['Open', 'High', 'Low', 'Close']].copy()
+                df_1d.index = df_1d.index.strftime('%Y-%m-%d')
+                output_tables.append("=== DAILY (1D) CANDLES (Last 5 Sessions) ===\n" + df_1d.round(4).to_string())
+        
+        # Fetch 1-Hour Data if requested
+        if "1H" in timeframe_choice:
+            data_1h = yf.download(ticker, period="5d", interval="1h")
+            if not data_1h.empty:
+                df_1h = data_1h[['Open', 'High', 'Low', 'Close']].copy()
+                df_1h.index = df_1h.index.strftime('%Y-%m-%d %H:%M')
+                output_tables.append("=== 1-HOUR (1H) CANDLES (Last 5 Days) ===\n" + df_1h.round(4).to_string())
+                
+        if not output_tables:
+            return f"Warning: Could not fetch data for ticker '{ticker}'."
+            
+        return "\n\n".join(output_tables)
     except Exception as e:
         return f"Statistical Data Error: {e}"
 
 def get_image_base64(image_path):
-    """Converts the local logo file to base64 for flawless HTML centering"""
     try:
         with open(image_path, "rb") as img_file:
             return base64.b64encode(img_file.read()).decode()
@@ -137,38 +149,29 @@ st.markdown("""
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 210, 106, 0.1); margin-top: 50px;
     }
     
-    .stTextInput input, .stTextArea textarea {
-        background-color: #1e293b !important; color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    }
+    /* 🚀 NEW: Ensures Dropdowns look premium in Dark Mode */
+    .stSelectbox div[data-baseweb="select"] > div { background-color: #1e293b !important; color: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; }
+    
+    .stTextInput input, .stTextArea textarea { background-color: #1e293b !important; color: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; }
     .stTextInput input:focus, .stTextArea textarea:focus { border: 1px solid #00d26a !important; box-shadow: 0 0 10px rgba(0, 210, 106, 0.2) !important; }
 
     [data-testid="stFileUploadDropzone"] { background-color: #1e293b !important; border: 1px dashed rgba(255, 255, 255, 0.2) !important; }
     [data-testid="stFileUploadDropzone"] * { color: #e2e8f0 !important; }
     [data-testid="stFileUploadDropzone"]:hover { border: 1px dashed #00d26a !important; background-color: rgba(0, 210, 106, 0.05) !important; }
-    
     [data-testid="stStatusWidget"], [data-testid="stExpander"] { background-color: #1e293b !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; color: #ffffff !important; }
     [data-testid="stStatusWidget"] *, [data-testid="stExpander"] * { color: #e2e8f0 !important; }
 
-    .glass-card {
-        background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px;
-        padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    }
-    
+    .glass-card { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); }
     .bias-card-bullish { background: linear-gradient(135deg, rgba(0, 210, 106, 0.1), rgba(0, 0, 0, 0)); border-left: 4px solid #00d26a; }
     .bias-card-bearish { background: linear-gradient(135deg, rgba(255, 75, 75, 0.1), rgba(0, 0, 0, 0)); border-left: 4px solid #ff4b4b; }
     .bias-card-neutral { background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(0, 0, 0, 0)); border-left: 4px solid #ffc107; }
-    
     .bias-text-bullish { color: #00d26a; font-size: 32px; font-weight: 800; letter-spacing: 1px; }
     .bias-text-bearish { color: #ff4b4b; font-size: 32px; font-weight: 800; letter-spacing: 1px; }
     .bias-text-neutral { color: #ffc107; font-size: 32px; font-weight: 800; letter-spacing: 1px; }
-    
     .level-card { padding: 16px; border-radius: 8px; margin-bottom: 12px; background: #1e293b; display: flex; flex-direction: column; }
     .level-bullish { border-left: 5px solid #00d26a; }
     .level-bearish { border-left: 5px solid #ff4b4b; }
     .level-inval { border-left: 5px solid #f97316; }
-    
     .level-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #cbd5e1 !important; margin-bottom: 4px; }
     .level-price { font-size: 24px; font-weight: bold; color: #ffffff !important; margin-bottom: 8px; font-family: 'Courier New', monospace;}
     .level-note { font-size: 13px; color: #94a3b8 !important; font-style: italic; }
@@ -210,6 +213,29 @@ if not st.session_state.authenticated:
     st.stop() 
 
 # ==========================================
+# RATE LIMITER & LOGGING
+# ==========================================
+if "request_timestamps" not in st.session_state:
+    st.session_state.request_timestamps = []
+
+def check_rate_limit():
+    now = time.time()
+    st.session_state.request_timestamps = [t for t in st.session_state.request_timestamps if now - t < 60]
+    if len(st.session_state.request_timestamps) >= 2:
+        return False
+    return True
+
+def log_to_google_sheets(notes, bias, raw_json):
+    try:
+        gc = gspread.service_account(filename="gcp_key.json")
+        sh = gc.open("IFX_Master_Brain_Logs")
+        worksheet = sh.sheet1
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        worksheet.append_row([timestamp, notes, bias, raw_json])
+    except Exception as e:
+        pass 
+
+# ==========================================
 # MAIN APP INTERFACE
 # ==========================================
 st.markdown(f"""
@@ -223,12 +249,13 @@ st.markdown(f"""
 st.info("⏱️ **BETA PHASE PROTOCOL:** The MoE (Mixture of Experts) array requires ~60 seconds to process 3 independent visual agents and parse live OHLC statistical data.")
 
 with st.container(border=True):
-    # 🚀 NEW: The UI now accepts a Ticker Symbol for live statistical data gathering
     col_input1, col_input2 = st.columns([1, 2])
     with col_input1:
         st.markdown("### 📊 Statistical Feed")
-        ticker_input = st.text_input("Asset Ticker (Optional)", placeholder="e.g., EURUSD=X, GC=F, BTC-USD")
-        st.caption("Yahoo Finance Ticker Format required.")
+        ticker_input = st.text_input("Asset Ticker", placeholder="Leave blank for AI Auto-Detect")
+        # 🚀 NEW: Dropdown for Timeframe selection
+        tf_selection = st.selectbox("Statistical Timeframe", ["1D (Macro)", "1H (Intraday)", "1D + 1H (Hybrid Alignment)"], index=2)
+        st.caption("Leave blank, or manually override (e.g., EURUSD=X)")
         
     with col_input2:
         st.markdown("### 📝 Contextual Feed")
@@ -248,185 +275,203 @@ if uploaded_files:
         
         st.write("")
         if st.button("▶ EXECUTE MULTI-AGENT SYNTHESIS", use_container_width=True):
-            with st.status("🧠 Initiating Hybrid FDM Matrix... (Please wait ~60s)", expanded=True) as status:
-                try:
-                    vertexai.init(project=PROJECT_ID, location=REGION)
-                    master_brain = GenerativeModel(
-                        model_name=TUNED_ENDPOINT_ID,
-                        system_instruction=SYSTEM_INSTRUCTION
-                    )
-                    
-                    # 🚀 NEW: Fetching all environmental data (Date, News, and Statistical Candles)
-                    status.update(label="📡 Fetching Live Macro & Statistical OHLC Data...", state="running")
-                    live_date = datetime.datetime.now().strftime("%A, %B %d, %Y")
-                    live_news = get_live_market_news()
-                    live_candles = get_live_candles(ticker_input.strip().upper())
-                    
-                    # 1. Image Processing & Cropping
-                    image_parts = []
-                    for file in uploaded_files:
-                        image = Image.open(file)
-                        if image.mode in ("RGBA", "P"):
-                            image = image.convert("RGB")
+            if not check_rate_limit():
+                st.error("⏳ RATE LIMIT ACTIVE: Please wait 60 seconds before executing another request.")
+            else:
+                with st.status("🧠 Initiating Hybrid FDM Matrix... (Please wait ~60s)", expanded=True) as status:
+                    try:
+                        st.session_state.request_timestamps.append(time.time())
+                        vertexai.init(project=PROJECT_ID, location=REGION)
+                        master_brain = GenerativeModel(
+                            model_name=TUNED_ENDPOINT_ID,
+                            system_instruction=SYSTEM_INSTRUCTION
+                        )
                         
-                        width, height = image.size
-                        image = image.crop((0, 70, width, height))
+                        # 1. Image Processing & Cropping
+                        image_parts = []
+                        for file in uploaded_files:
+                            image = Image.open(file)
+                            if image.mode in ("RGBA", "P"):
+                                image = image.convert("RGB")
+                            width, height = image.size
+                            image = image.crop((0, 70, width, height))
+                            if image.width > 1600:
+                                ratio = 1600 / image.width
+                                new_height = int(image.height * ratio)
+                                image = image.resize((1600, new_height), Image.Resampling.LANCZOS)
+                            img_byte_arr = io.BytesIO()
+                            image.save(img_byte_arr, format='JPEG', quality=85)
+                            compressed_bytes = img_byte_arr.getvalue()
+                            image_parts.append(Part.from_data(data=compressed_bytes, mime_type="image/jpeg"))
+
+                        # Pre-Flight Vision Scan
+                        ticker_to_use = ticker_input.strip().upper()
+                        if not ticker_to_use:
+                            status.update(label="👁️ Pre-Flight Vision: Scanning chart for asset ticker...", state="running")
+                            detect_prompt = """Look at this trading chart. Identify the main asset being traded (look in the top left or background).
+                            Reply ONLY with the exact Yahoo Finance ticker symbol for that asset. 
+                            Examples: EUR/USD = EURUSD=X | Gold/XAUUSD = XAUUSD=X (or GC=F) | Bitcoin = BTC-USD | SPX/S&P500 = ^GSPC | NAS100 = ^NDX.
+                            If you absolutely cannot determine the asset, reply exactly with: UNKNOWN"""
+                            try:
+                                detect_resp = master_brain.generate_content([detect_prompt, image_parts[0]], generation_config={"temperature": 0.0})
+                                detected_val = detect_resp.text.strip().upper()
+                                if "UNKNOWN" not in detected_val:
+                                    ticker_to_use = detected_val
+                                    st.toast(f"🤖 AI Auto-Detected Ticker: {ticker_to_use}")
+                            except Exception:
+                                pass
+
+                        # Fetching live data
+                        status.update(label="📡 Fetching Live Macro & Statistical OHLC Data...", state="running")
+                        live_date = datetime.datetime.now().strftime("%A, %B %d, %Y")
+                        live_news = get_live_market_news()
                         
-                        if image.width > 1600:
-                            ratio = 1600 / image.width
-                            new_height = int(image.height * ratio)
-                            image = image.resize((1600, new_height), Image.Resampling.LANCZOS)
-                            
-                        img_byte_arr = io.BytesIO()
-                        image.save(img_byte_arr, format='JPEG', quality=85)
-                        compressed_bytes = img_byte_arr.getvalue()
-                        image_parts.append(Part.from_data(data=compressed_bytes, mime_type="image/jpeg"))
-                    
-                    # 2. Phase 1: The 3 Independent Draft Analyses (Now fed BOTH Visual and Math Data)
-                    draft_prompt = f"""Analyze the following asset based on FDM.
-Asset: Visual Charts + Ticker {ticker_input}
+                        # 🚀 NEW: Passes both the Ticker AND the Dropdown selection to the function
+                        live_candles = get_live_candles(ticker_to_use, tf_selection)
+                        
+                        # 2. Phase 1: The 3 Independent Draft Analyses
+                        draft_prompt = f"""Analyze the following asset based on FDM.
+Asset: Visual Charts + Ticker {ticker_to_use}
 Date: {live_date}
 
-RAW STATISTICAL DATA (Last 5 Sessions OHLC):
+RAW STATISTICAL DATA:
 {live_candles}
 
 Provide the Pivot, Targets, and Bias.
 Notes: {trading_notes}"""
-                    
-                    drafts = []
-                    for i in range(3):
-                        status.update(label=f"🕵️‍♂️ AI Analyst {i+1} synthesizing Visual + Statistical Data...", state="running")
+                        
+                        drafts = []
+                        for i in range(3):
+                            status.update(label=f"🕵️‍♂️ AI Analyst {i+1} synthesizing Visual + Statistical Data...", state="running")
+                            try:
+                                response = master_brain.generate_content([draft_prompt] + image_parts, generation_config={"temperature": 0.4})
+                                drafts.append(response.text)
+                                time.sleep(5) 
+                            except Exception as agent_error:
+                                st.warning(f"⚠️ Agent {i+1} latency hit. Compensating with remaining nodes.")
+                                drafts.append(f"Agent {i+1} was delayed. Rely on the consensus of the other agents.")
+                                time.sleep(5)
+                            
+                        # 3. Phase 2: The Master Arbitrator Synthesis
+                        status.update(label="⚖️ Master Arbitrator synthesizing consensus matrix...", state="running")
+                        
+                        synthesis_prompt = f"""
+                        You are the Master Arbitrator. Review these 3 independent FDM analyses of the attached charts (written in your native tuned format):
+                        
+                        Agent 1: {drafts[0]}
+                        Agent 2: {drafts[1]}
+                        Agent 3: {drafts[2]}
+                        
+                        Today's exact date is {live_date}. 
+                        LIVE BREAKING NEWS HEADLINES:
+                        {live_news}
+                        
+                        Your job is to find the consensus. Eliminate any outlier targets or wildly inaccurate pivot zones. 
+                        Identify the true, logical Future Pivot Zone. Anchor your levels precisely to the structural visual wicks OR the mathematical highs/lows provided in the raw data.
+                        
+                        You MUST output a valid JSON exactly matching this structure:
+                        {{
+                          "structural_reasoning": "Explain the final consensus achieved from the 3 drafts regarding the MTF structure.",
+                          "trade_summary": {{
+                            "Current Live Price": "Exact current price from the right edge",
+                            "Daily Pivot Zone": "Consensus exact price range. CRITICAL RULE: The bottom of this zone MUST be your Invalidation level (if Bullish), or the top of this zone MUST be your Invalidation level (if Bearish).",
+                            "Market Structure": "Consensus next move",
+                            "Time Context": "Session timing context",
+                            "MTF Alignment": "How HTF and LTF align",
+                            "Bias": "Bullish, Bearish, or Neutral",
+                            "Fundamental Context": "First, identify the specific asset in the screenshots. Then, using the Live Breaking News provided above and the user's notes, write a brutal 2-3 sentence fundamental backdrop detailing exactly how current macro events impact THIS specific asset.",
+                            "Levels": [
+                              {{"Level Type": "Target 1 (Partial)", "Price Point": "First macro target in the direction of the main bias", "Condition / Notes": "What to look for here"}},
+                              {{"Level Type": "Target 2 (Final)", "Price Point": "Second extended macro target in the direction of the main bias (if available)", "Condition / Notes": "What to look for here"}},
+                              {{"Level Type": "Invalidation Zone", "Price Point": "Exact structural line in the sand. MUST be the exact outer boundary of the Daily Pivot Zone.", "Condition / Notes": "If this breaks, the primary bias changes"}},
+                              {{"Level Type": "Counter-Bias Target", "Price Point": "Macro target strictly BEYOND the Invalidation Zone (Where price goes AFTER invalidation breaks)", "Condition / Notes": "What to look for here"}}
+                            ]
+                          }}
+                        }}
+                        """
+                        
+                        final_response = master_brain.generate_content([synthesis_prompt] + image_parts, generation_config={"temperature": 0.1})
+                        raw_text = final_response.text
+                        
+                        status.update(label="✅ Consensus reached! Matrix calculated.", state="complete")
+                        
+                        # 4. Render UI
                         try:
-                            response = master_brain.generate_content([draft_prompt] + image_parts, generation_config={"temperature": 0.4})
-                            drafts.append(response.text)
-                            time.sleep(5) 
-                        except Exception as agent_error:
-                            st.warning(f"⚠️ Agent {i+1} latency hit. Compensating with remaining nodes.")
-                            drafts.append(f"Agent {i+1} was delayed. Rely on the consensus of the other agents.")
-                            time.sleep(5)
-                        
-                    # 3. Phase 2: The Master Arbitrator Synthesis
-                    status.update(label="⚖️ Master Arbitrator synthesizing consensus matrix...", state="running")
-                    
-                    synthesis_prompt = f"""
-                    You are the Master Arbitrator. Review these 3 independent FDM analyses of the attached charts (written in your native tuned format):
-                    
-                    Agent 1: {drafts[0]}
-                    Agent 2: {drafts[1]}
-                    Agent 3: {drafts[2]}
-                    
-                    Today's exact date is {live_date}. 
-                    LIVE BREAKING NEWS HEADLINES:
-                    {live_news}
-                    
-                    Your job is to find the consensus. Eliminate any outlier targets or wildly inaccurate pivot zones. 
-                    Identify the true, logical Future Pivot Zone. Anchor your levels precisely to the structural visual wicks OR the mathematical highs/lows provided in the raw data.
-                    
-                    You MUST output a valid JSON exactly matching this structure:
-                    {{
-                      "structural_reasoning": "Explain the final consensus achieved from the 3 drafts regarding the MTF structure.",
-                      "trade_summary": {{
-                        "Current Live Price": "Exact current price from the right edge",
-                        "Daily Pivot Zone": "Consensus exact price range. CRITICAL RULE: The bottom of this zone MUST be your Invalidation level (if Bullish), or the top of this zone MUST be your Invalidation level (if Bearish).",
-                        "Market Structure": "Consensus next move",
-                        "Time Context": "Session timing context",
-                        "MTF Alignment": "How HTF and LTF align",
-                        "Bias": "Bullish, Bearish, or Neutral",
-                        "Fundamental Context": "First, identify the specific asset in the screenshots (e.g., EURUSD, XAUUSD). Then, using the Live Breaking News provided above and the user's notes, write a brutal 2-3 sentence fundamental backdrop detailing exactly how current macro events impact THIS specific asset. If the news doesn't directly mention the asset, explain how the broader risk sentiment or USD correlation is currently affecting it.",
-                        "Levels": [
-                          {{"Level Type": "Target 1 (Partial)", "Price Point": "First macro target in the direction of the main bias", "Condition / Notes": "What to look for here"}},
-                          {{"Level Type": "Target 2 (Final)", "Price Point": "Second extended macro target in the direction of the main bias (if available)", "Condition / Notes": "What to look for here"}},
-                          {{"Level Type": "Invalidation Zone", "Price Point": "Exact structural line in the sand. MUST be the exact outer boundary of the Daily Pivot Zone.", "Condition / Notes": "If this breaks, the primary bias changes"}},
-                          {{"Level Type": "Counter-Bias Target", "Price Point": "Macro target strictly BEYOND the Invalidation Zone (Where price goes AFTER invalidation breaks)", "Condition / Notes": "What to look for here"}}
-                        ]
-                      }}
-                    }}
-                    """
-                    
-                    final_response = master_brain.generate_content([synthesis_prompt] + image_parts, generation_config={"temperature": 0.1})
-                    raw_text = final_response.text
-                    
-                    status.update(label="✅ Consensus reached! Matrix calculated.", state="complete")
-                    
-                    # 4. Render UI
-                    try:
-                        match = re.search(r'```(?:json)?\n?(.*?)\n?```', raw_text, re.DOTALL)
-                        json_str = match.group(1) if match else raw_text
-                        data = json.loads(json_str)
-                        
-                        bias = "Neutral"
-                        if "trade_summary" in data:
-                            summary = data["trade_summary"]
-                            bias = summary.get("Bias", "Neutral")
+                            match = re.search(r'```(?:json)?\n?(.*?)\n?```', raw_text, re.DOTALL)
+                            json_str = match.group(1) if match else raw_text
+                            data = json.loads(json_str)
                             
-                            # --- BEAUTIFIED DASHBOARD RENDER ---
-                            st.markdown("<br>", unsafe_allow_html=True)
-                            
-                            bias_class = "bullish" if "Bullish" in bias else ("bearish" if "Bearish" in bias else "neutral")
-                            icon = "🐂" if "Bullish" in bias else ("🐻" if "Bearish" in bias else "⚖️")
-                            
-                            st.markdown(f"""
-                            <div class="glass-card bias-card-{bias_class}" style="text-align: center; padding: 30px;">
-                                <h3 style="margin-bottom: 5px; color: #cbd5e1 !important;">MASTER CONSENSUS</h3>
-                                <div class="bias-text-{bias_class}">{bias.upper()} {icon}</div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            col_left, col_right = st.columns([1.2, 1])
-                            
-                            with col_left:
-                                st.markdown("### 🧠 FDM MATRIX LOGIC")
-                                current_price = summary.get("Current Live Price", "N/A")
-                                if current_price and current_price != "N/A":
-                                    st.markdown(f"📡 **Live Price Anchored:** <code style='color:#00d26a; background:rgba(0,210,106,0.1);'>{current_price}</code>", unsafe_allow_html=True)
-                                    st.write("")
+                            bias = "Neutral"
+                            if "trade_summary" in data:
+                                summary = data["trade_summary"]
+                                bias = summary.get("Bias", "Neutral")
+                                
+                                st.markdown("<br>", unsafe_allow_html=True)
+                                bias_class = "bullish" if "Bullish" in bias else ("bearish" if "Bearish" in bias else "neutral")
+                                icon = "🐂" if "Bullish" in bias else ("🐻" if "Bearish" in bias else "⚖️")
+                                
+                                st.markdown(f"""
+                                <div class="glass-card bias-card-{bias_class}" style="text-align: center; padding: 30px;">
+                                    <h3 style="margin-bottom: 5px; color: #cbd5e1 !important;">MASTER CONSENSUS</h3>
+                                    <div class="bias-text-{bias_class}">{bias.upper()} {icon}</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                
+                                col_left, col_right = st.columns([1.2, 1])
+                                
+                                with col_left:
+                                    st.markdown("### 🧠 FDM MATRIX LOGIC")
+                                    current_price = summary.get("Current Live Price", "N/A")
+                                    if current_price and current_price != "N/A":
+                                        st.markdown(f"📡 **Live Price Anchored:** <code style='color:#00d26a; background:rgba(0,210,106,0.1);'>{current_price}</code>", unsafe_allow_html=True)
+                                        st.write("")
 
-                                pivot_zone = summary.get("Daily Pivot Zone", "N/A")
-                                if pivot_zone and pivot_zone != "N/A":
-                                    st.markdown(f"<div class='glass-card' style='border-left: 4px solid #3b82f6;'><span class='sub-text'>🎯 VERIFIED PIVOT ZONE</span><br><b>{pivot_zone}</b></div>", unsafe_allow_html=True)
-                                
-                                ms = summary.get("Market Structure", data.get("levels_and_structure_logic", "N/A"))
-                                st.markdown(f"<div class='glass-card'><span class='sub-text'>🏗️ MARKET STRUCTURE</span><br>{ms}</div>", unsafe_allow_html=True)
-                                
-                                tc = summary.get("Time Context", data.get("deduced_time_and_session_logic", "N/A"))
-                                st.markdown(f"<div class='glass-card'><span class='sub-text'>⏱️ TIME & SESSION</span><br>{tc}</div>", unsafe_allow_html=True)
-                                
-                                mtf = summary.get("MTF Alignment", data.get("deduced_mtf_alignment", "N/A"))
-                                st.markdown(f"<div class='glass-card'><span class='sub-text'>📐 MTF ALIGNMENT</span><br>{mtf}</div>", unsafe_allow_html=True)
-
-                            with col_right:
-                                st.markdown("### 🎯 MACRO ZONES")
-                                for level in summary.get("Levels", []):
-                                    l_type = level.get('Level Type', 'Level')
-                                    price = level.get('Price Point', 'N/A')
-                                    note = level.get('Condition / Notes', '')
+                                    pivot_zone = summary.get("Daily Pivot Zone", "N/A")
+                                    if pivot_zone and pivot_zone != "N/A":
+                                        st.markdown(f"<div class='glass-card' style='border-left: 4px solid #3b82f6;'><span class='sub-text'>🎯 VERIFIED PIVOT ZONE</span><br><b>{pivot_zone}</b></div>", unsafe_allow_html=True)
                                     
-                                    if "Invalidation" in l_type:
-                                        card_class = "level-inval"
-                                    elif "Counter" in l_type:
-                                        card_class = "level-bearish" if "Bullish" in bias else ("level-bullish" if "Bearish" in bias else "level-inval")
-                                    else:
-                                        card_class = "level-bullish" if "Bullish" in bias else ("level-bearish" if "Bearish" in bias else "level-inval")
+                                    ms = summary.get("Market Structure", data.get("levels_and_structure_logic", "N/A"))
+                                    st.markdown(f"<div class='glass-card'><span class='sub-text'>🏗️ MARKET STRUCTURE</span><br>{ms}</div>", unsafe_allow_html=True)
                                     
-                                    st.markdown(f"""
-                                    <div class="level-card {card_class}">
-                                        <div class="level-title">{l_type}</div>
-                                        <div class="level-price">{price}</div>
-                                        <div class="level-note">{note}</div>
-                                    </div>
-                                    """, unsafe_allow_html=True)
-                            
-                            fundies = summary.get("Fundamental Context", "")
-                            if fundies:
-                                st.markdown(f"<div class='glass-card' style='border-left: 4px solid #a855f7; margin-top: 20px;'><span class='sub-text'>🌍 MACRO FUNDAMENTALS ({live_date})</span><br>{fundies}</div>", unsafe_allow_html=True)
+                                    tc = summary.get("Time Context", data.get("deduced_time_and_session_logic", "N/A"))
+                                    st.markdown(f"<div class='glass-card'><span class='sub-text'>⏱️ TIME & SESSION</span><br>{tc}</div>", unsafe_allow_html=True)
+                                    
+                                    mtf = summary.get("MTF Alignment", data.get("deduced_mtf_alignment", "N/A"))
+                                    st.markdown(f"<div class='glass-card'><span class='sub-text'>📐 MTF ALIGNMENT</span><br>{mtf}</div>", unsafe_allow_html=True)
 
-                            st.divider()
-                            with st.expander("⚙️ View Developer Raw Output (JSON)"):
-                                st.code(raw_text, language="json")
+                                with col_right:
+                                    st.markdown("### 🎯 MACRO ZONES")
+                                    for level in summary.get("Levels", []):
+                                        l_type = level.get('Level Type', 'Level')
+                                        price = level.get('Price Point', 'N/A')
+                                        note = level.get('Condition / Notes', '')
+                                        
+                                        if "Invalidation" in l_type:
+                                            card_class = "level-inval"
+                                        elif "Counter" in l_type:
+                                            card_class = "level-bearish" if "Bullish" in bias else ("level-bullish" if "Bearish" in bias else "level-inval")
+                                        else:
+                                            card_class = "level-bullish" if "Bullish" in bias else ("level-bearish" if "Bearish" in bias else "level-inval")
+                                        
+                                        st.markdown(f"""
+                                        <div class="level-card {card_class}">
+                                            <div class="level-title">{l_type}</div>
+                                            <div class="level-price">{price}</div>
+                                            <div class="level-note">{note}</div>
+                                        </div>
+                                        """, unsafe_allow_html=True)
                                 
-                    except json.JSONDecodeError:
-                        st.warning("⚠️ Data parse error. Displaying raw neural output:")
-                        st.code(raw_text, language="json")
-                        
-                except Exception as e:
-                    st.error(f"❌ SYSTEM FAILURE: {e}")
+                                fundies = summary.get("Fundamental Context", "")
+                                if fundies:
+                                    st.markdown(f"<div class='glass-card' style='border-left: 4px solid #a855f7; margin-top: 20px;'><span class='sub-text'>🌍 MACRO FUNDAMENTALS ({live_date})</span><br>{fundies}</div>", unsafe_allow_html=True)
+
+                                st.divider()
+                                with st.expander("⚙️ View Developer Raw Output (JSON)"):
+                                    st.code(raw_text, language="json")
+                                    
+                        except json.JSONDecodeError:
+                            st.warning("⚠️ Data parse error. Displaying raw neural output:")
+                            st.code(raw_text, language="json")
+                            
+                    except Exception as e:
+                        st.error(f"❌ SYSTEM FAILURE: {e}")
