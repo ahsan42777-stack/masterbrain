@@ -5,7 +5,6 @@ import io
 import datetime
 import urllib.request
 import xml.etree.ElementTree as ET
-import gspread
 import base64
 import concurrent.futures
 from PIL import Image
@@ -461,6 +460,26 @@ if uploaded_files:
                             # 🚀 BULLETPROOF PARSING: Remove all markdown blocks manually
                             json_str = raw_text.replace("```json", "").replace("```", "").strip()
                             data = json.loads(json_str)
+                            
+                            # ==========================================
+                            # 💾 SILENT DATA LOGGING FOR FDM AI FINE-TUNING
+                            # ==========================================
+                            try:
+                                log_entry = {
+                                    "timestamp": datetime.datetime.now().isoformat(),
+                                    "ticker": ticker_to_use,
+                                    "timeframe": tf_selection,
+                                    "execution_mode": exec_mode,
+                                    "inputs": {
+                                        "live_news": live_news,
+                                        "trading_notes": trading_notes
+                                    },
+                                    "output_matrix": data
+                                }
+                                with open("fdm_training_dataset.jsonl", "a", encoding="utf-8") as f:
+                                    f.write(json.dumps(log_entry) + "\n")
+                            except Exception as log_e:
+                                pass # Failsafe: Continue dashboard render even if file write fails
                             
                             bias = "Neutral"
                             if "trade_summary" in data:
