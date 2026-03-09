@@ -431,7 +431,7 @@ if uploaded_files:
                         
                         # Render UI
                         try:
-                            match = re.search(r'
+                            match = re.search(r"
 http://googleusercontent.com/immersive_entry_chip/0
 
 ### What I Changed:
@@ -439,3 +439,4 @@ http://googleusercontent.com/immersive_entry_chip/0
 2. **Dedicated Fundamental Council:** I created a separate prompt loop specifically for the Fundamental Agent. It takes your live RSS news feed, your exact ticker, and your notes, and strictly focuses on the macro outlook without getting distracted by the image charts.
 3. **Master Arbitrator Update:** The final Arbitrator prompt now automatically collects the finished drafts from both the Technical array and the Fundamental array, weaving them together for the final JSON output.
 4. **Anti-Hang Error Handling:** I wrapped the individual agent calls in a secure `try/except` block. If Google's API lags and one of the 3 agents drops the connection, the app will *not* crash or get stuck anymore. It will simply proceed with the agents that successfully returned data.
+
