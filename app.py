@@ -110,6 +110,15 @@ if logo_base64:
 else:
     logo_html = '<h1 style="font-size: 60px; margin-bottom: 0px;">🧠</h1>'
 
+# 🚀 Parallel Agent Execution Function
+def fetch_agent_response(model, role, index, prompt, images, temp):
+    """Executes a single AI agent request asynchronously"""
+    try:
+        resp = model.generate_content([prompt] + images, generation_config={"temperature": temp})
+        return role, index, resp.text
+    except Exception as e:
+        return role, index, f"WARNING: Agent data dropped due to latency ({str(e)})"
+
 # ==========================================
 # IRONCLAD SYSTEM INSTRUCTIONS
 # ==========================================
@@ -231,15 +240,6 @@ def check_rate_limit():
         return False
     return True
 
-# 🚀 NEW: Parallel Agent Execution Function
-def fetch_agent_response(model, role, index, prompt, images, temp):
-    """Executes a single AI agent request asynchronously"""
-    try:
-        resp = model.generate_content([prompt] + images, generation_config={"temperature": temp})
-        return role, index, resp.text
-    except Exception as e:
-        return role, index, f"WARNING: Agent data dropped due to latency ({str(e)})"
-
 # ==========================================
 # MAIN APP INTERFACE
 # ==========================================
@@ -343,7 +343,7 @@ if uploaded_files:
                         live_news = get_live_market_news()
                         live_candles = get_live_candles(ticker_to_use, tf_selection)
                         
-                        # 🚀 THE PARALLEL MATRIX (Tech + Fundamental Councils)
+                        # 🚀 THE PARALLEL MATRIX (Tech + Fundamental Councils with Strict Timeout)
                         status.update(label="⚡ Firing Parallel Threads: Launching Technical & Fundamental Councils simultaneously...", state="running")
                         
                         num_agents = 3 if "Deep" in exec_mode else 1
@@ -368,24 +368,52 @@ if uploaded_files:
                         tech_drafts = []
                         fundy_draft = "Fundamental data unavailable."
                         
-                        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-                            futures = []
-                            # Submit Technical Agents
-                            for i in range(num_agents):
-                                futures.append(executor.submit(fetch_agent_response, master_brain, "Tech", i+1, tech_prompt, image_parts, 0.4))
+                        # Initialize executor directly to allow non-blocking shutdown
+                        executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+                        future_to_agent = {}
+                        
+                        # Submit Technical Agents
+                        for i in range(num_agents):
+                            future = executor.submit(fetch_agent_response, master_brain, "Tech", i+1, tech_prompt, image_parts, 0.4)
+                            future_to_agent[future] = ("Tech", i+1)
                             
-                            # Submit Fundamental Agent (No images needed, pure macro data)
-                            futures.append(executor.submit(fetch_agent_response, master_brain, "Fundy", 1, fundy_prompt, [], 0.2))
-                            
-                            for future in concurrent.futures.as_completed(futures):
+                        # Submit Fundamental Agent (No images needed, pure macro data)
+                        future = executor.submit(fetch_agent_response, master_brain, "Fundy", 1, fundy_prompt, [], 0.2)
+                        future_to_agent[future] = ("Fundy", 1)
+                        
+                        # ⏳ Enforce a strict 15-second timeout for all parallel nodes
+                        done, not_done = concurrent.futures.wait(future_to_agent.keys(), timeout=15.0)
+                        
+                        # Process completed agent data
+                        for future in done:
+                            try:
                                 role, idx, text = future.result()
                                 if role == "Tech":
                                     tech_drafts.append(f"Agent {idx}: {text}")
                                 elif role == "Fundy":
                                     fundy_draft = text
+                            except Exception as e:
+                                # Failsafe fallback
+                                role, idx = future_to_agent[future]
+                                if role == "Tech":
+                                    tech_drafts.append(f"Agent {idx}: ERROR - Execution failed ({str(e)}).")
+                        
+                        # Flag and explicitly mention timed-out agents for the Master Arbitrator
+                        for future in not_done:
+                            role, idx = future_to_agent[future]
+                            if role == "Tech":
+                                dropped_msg = f"Agent {idx}: ⚠️ TIMEOUT - This Technical Council node was dropped to maintain execution speed. Proceed with remaining active nodes."
+                                tech_drafts.append(dropped_msg)
+                                st.toast(f"⚠️ Technical Agent {idx} dropped due to latency.", icon="⏳")
+                            elif role == "Fundy":
+                                fundy_draft = "⚠️ Fundamental data dropped due to API latency (TIMEOUT). Rely strictly on technical structure and live price action."
+                                st.toast("⚠️ Fundamental Council dropped due to latency.", icon="⏳")
+                        
+                        # Forcefully close the executor without waiting for hung threads
+                        executor.shutdown(wait=False, cancel_futures=True)
 
                         # Master Arbitrator Synthesis
-                        status.update(label="⚖️ Master Arbitrator formatting consensus matrix...", state="running")
+                        status.update(label="⚖️ Master Arbitrator formatting consensus matrix (bypassing lagging nodes)...", state="running")
                         
                         tech_agent_texts = "\n".join(tech_drafts)
                         
@@ -493,15 +521,15 @@ if uploaded_files:
                                             <div class="level-note">{note}</div>
                                         </div>
                                         """, unsafe_allow_html=True)
-                                
+                                    
                                     fundies = summary.get("Fundamental Context", "")
                                     if fundies:
                                         st.markdown(f"<div class='glass-card' style='border-left: 4px solid #a855f7; margin-top: 20px;'><span class='sub-text'>🌍 MACRO FUNDAMENTALS ({live_date})</span><br>{fundies}</div>", unsafe_allow_html=True)
 
-                                st.divider()
-                                with st.expander("⚙️ View Developer Raw Output (JSON)"):
-                                    st.code(raw_text, language="json")
-                                    
+                            st.divider()
+                            with st.expander("⚙️ View Developer Raw Output (JSON)"):
+                                st.code(raw_text, language="json")
+                                
                         except json.JSONDecodeError:
                             st.warning("⚠️ Data parse error. Displaying raw neural output:")
                             st.code(raw_text, language="json")
